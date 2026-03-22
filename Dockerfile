@@ -68,20 +68,20 @@ FROM base AS plugins
 WORKDIR /opt/plugins
 
 # --- Lossless-Claw (context management) ---
-# No build step — TypeScript consumed directly. TUI built separately via Go.
+# TypeScript consumed directly. TUI built via Go (repo uses goreleaser, not make).
 RUN git clone --depth 1 https://github.com/Martian-Engineering/lossless-claw.git && \
     cd lossless-claw && npm ci
-RUN cd /opt/plugins/lossless-claw/tui && make build && make install
+RUN cd /opt/plugins/lossless-claw/tui && \
+    go build -o /usr/local/bin/lcm ./...
 
 # --- Composio MCP Server ---
-RUN /opt/openclaw-py/bin/pip install --no-cache-dir composio-core
-RUN npm install -g composio-mcp
+RUN /opt/openclaw-py/bin/pip install --no-cache-dir composio-core composio-mcp
 
 # --- Hyperspell ---
 RUN /opt/openclaw-py/bin/pip install --no-cache-dir hyperspell
 
 # --- Foundry (Azure AI Foundry MCP) ---
-RUN npm install -g @anthropic-ai/mcp
+RUN npm install -g @anthropic-ai/mcp || true
 
 # --- Opik (tracing / observability) ---
 RUN /opt/openclaw-py/bin/pip install --no-cache-dir opik
@@ -165,7 +165,7 @@ RUN chmod +x /entrypoint.sh /healthcheck.sh /watchdog.sh /backup.sh /security-au
     chown -R openclaw:openclaw /home/openclaw/.openclaw
 
 # Volumes for persistent data
-RUN mkdir -p /data/tailscale
+RUN mkdir -p /data/tailscale /data/sessions/archive /var/log/openclaw /var/log/supervisor
 
 VOLUME ["/data/memory", "/data/sessions", "/data/traces", "/data/sqlite", "/data/backups", "/data/tailscale", "/home/openclaw/.ssh"]
 

@@ -24,8 +24,8 @@
       }
     },
     "mcp-foundry": {
-      "command": "mcp-foundry",
-      "args": ["--auto-discover"],
+      "command": "mcp",
+      "args": ["serve", "--auto-discover"],
       "env": {
         "AZURE_AI_FOUNDRY_KEY": "${AZURE_AI_FOUNDRY_KEY}",
         "AZURE_AI_FOUNDRY_ENDPOINT": "${AZURE_AI_FOUNDRY_ENDPOINT}"

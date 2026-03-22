@@ -179,7 +179,9 @@ echo "       Sun   - Weekly review"
 # Cron jobs
 # ---------------------------------------------------------------------------
 echo "[init] Setting up cron jobs..."
-crontab /etc/cron.d/openclaw-cron 2>/dev/null || true
+# Crontab is already in /etc/cron.d/ with correct permissions (0644).
+# cron daemon picks it up automatically — no need to load via 'crontab' command.
+# (The file uses system crontab format with user fields, incompatible with 'crontab' command.)
 
 # ---------------------------------------------------------------------------
 # Config override merging
@@ -207,5 +209,27 @@ fi
 # ---------------------------------------------------------------------------
 # Start
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Configure supervisord service states based on env vars
+# Services default to autostart=false in supervisord.conf; enable them here.
+# ---------------------------------------------------------------------------
+SUPERVISOR_CONF="/etc/supervisor/conf.d/openclaw.conf"
+
+if [ "${SSH_ENABLE:-true}" = "true" ]; then
+    sed -i '/\[program:sshd\]/,/^\[/{s/autostart=false/autostart=true/}' "$SUPERVISOR_CONF"
+fi
+
+if [ "${OPIK_SELF_HOSTED:-true}" = "true" ]; then
+    sed -i '/\[program:opik\]/,/^\[/{s/autostart=false/autostart=true/}' "$SUPERVISOR_CONF"
+fi
+
+if [ "${CADDY_ENABLE:-false}" = "true" ]; then
+    sed -i '/\[program:caddy\]/,/^\[/{s/autostart=false/autostart=true/}' "$SUPERVISOR_CONF"
+fi
+
+if [ "${FAIL2BAN_ENABLE:-true}" = "true" ]; then
+    sed -i '/\[program:fail2ban\]/,/^\[/{s/autostart=false/autostart=true/}' "$SUPERVISOR_CONF"
+fi
+
 echo "[init] Initialization complete. Starting services..."
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/openclaw.conf

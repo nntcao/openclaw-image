@@ -5,7 +5,7 @@
 set -euo pipefail
 
 LOG="/var/log/openclaw/watchdog.log"
-STATE_FILE="/tmp/watchdog-state"
+STATE_FILE="/data/watchdog-state"
 ALERT_COOLDOWN=1800  # 30 minutes between repeated alerts for same service
 
 # Initialize state file

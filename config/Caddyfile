@@ -40,15 +40,6 @@
         -Server
     }
 
-    # Rate limiting
-    rate_limit {
-        zone api {
-            key {remote_host}
-            events 60
-            window 1m
-        }
-    }
-
     # Access log
     log {
         output file /var/log/caddy/access.log {
