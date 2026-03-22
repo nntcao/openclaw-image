@@ -73,29 +73,14 @@ ln -sfn /data/traces /home/openclaw/.openclaw/traces
 chown -R openclaw:openclaw /data/sqlite
 
 # ---------------------------------------------------------------------------
-# Plugin initialization (via OpenClaw's built-in plugin system)
+# Plugin initialization (OpenClaw has 41 stock plugins — doctor enables them)
 # ---------------------------------------------------------------------------
 echo "[init] Initializing plugins..."
 OPENCLAW="/opt/openclaw/bin/openclaw"
 
-# Install plugins if not already present (fail gracefully)
-install_plugin() {
-    local plugin="$1"
-    if ! su -c "$OPENCLAW plugins list 2>/dev/null" openclaw | grep -q "$plugin"; then
-        echo "[init] Installing plugin: $plugin"
-        su -c "$OPENCLAW plugins install $plugin 2>/dev/null" openclaw || echo "[init] WARNING: Failed to install $plugin (skipping)"
-    else
-        echo "[init] Plugin already installed: $plugin"
-    fi
-}
-
-# Core plugins
-install_plugin "composio"
-install_plugin "opik"
-
-# Run doctor to auto-configure based on env
-echo "[init] Running openclaw doctor..."
-su -c "$OPENCLAW doctor --fix 2>/dev/null" openclaw || true
+# Run doctor to auto-configure stock plugins based on env/config
+echo "[init] Running openclaw doctor --fix..."
+su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH $OPENCLAW doctor --fix" openclaw 2>/dev/null || true
 
 # Lossless-Claw: ensure DB exists
 if [ "${LCM_ENABLED:-true}" = "true" ]; then
@@ -107,18 +92,6 @@ if [ "${LCM_ENABLED:-true}" = "true" ]; then
     echo "[init] Lossless-Claw enabled (threshold=${LCM_CONTEXT_THRESHOLD:-0.75}, tail=${LCM_FRESH_TAIL_COUNT:-32})"
 fi
 
-# Log plugin status
-if [ -n "${COMPOSIO_API_KEY:-}" ]; then
-    echo "[init] Composio configured"
-else
-    echo "[init] WARNING: COMPOSIO_API_KEY not set - Composio integrations unavailable"
-fi
-
-if [ -n "${HYPERSPELL_API_KEY:-}" ]; then
-    echo "[init] Hyperspell memory backend configured"
-else
-    echo "[init] WARNING: HYPERSPELL_API_KEY not set - falling back to markdown memory"
-fi
 
 # ---------------------------------------------------------------------------
 # Caddy (reverse proxy / HTTPS)
