@@ -1,0 +1,59 @@
+{
+    # Global options
+    email {$ACME_EMAIL:admin@example.com}
+    # Uncomment for staging certs during testing:
+    # acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+{$DOMAIN:localhost} {
+    # OpenClaw API
+    reverse_proxy /api/* localhost:3000 {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # OpenClaw WebSocket
+    reverse_proxy /ws/* localhost:3000 {
+        header_up Connection {>Connection}
+        header_up Upgrade {>Upgrade}
+    }
+
+    # Telegram webhook endpoint
+    reverse_proxy /webhook/telegram localhost:8787 {
+        header_up X-Real-IP {remote_host}
+    }
+
+    # Opik tracing UI
+    reverse_proxy /traces/* localhost:5173
+
+    # Default: OpenClaw API
+    reverse_proxy localhost:3000
+
+    # Security headers
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy strict-origin-when-cross-origin
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        -Server
+    }
+
+    # Rate limiting
+    rate_limit {
+        zone api {
+            key {remote_host}
+            events 60
+            window 1m
+        }
+    }
+
+    # Access log
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 50mb
+            roll_keep 5
+        }
+    }
+}

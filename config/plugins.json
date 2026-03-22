@@ -1,0 +1,65 @@
+{
+  "plugins": {
+    "entries": {
+      "lossless-claw": {
+        "enabled": true,
+        "source": "/opt/plugins/lossless-claw",
+        "config": {
+          "freshTailCount": 32,
+          "incrementalMaxDepth": -1,
+          "contextThreshold": 0.75,
+          "dbPath": "/data/sqlite/lcm.db",
+          "summaryModel": "${ROUTE_LIGHTWEIGHT_MODEL}"
+        },
+        "description": "Lossless context management - preserves full conversation history via DAG summarization"
+      },
+      "composio": {
+        "enabled": true,
+        "type": "mcp",
+        "mcpServer": "composio-mcp",
+        "config": {
+          "apiKeyEnv": "COMPOSIO_API_KEY",
+          "isolateIntegrations": true,
+          "autoRefreshTokens": true
+        },
+        "description": "Managed integrations via MCP - OAuth, token refresh, rate limits handled automatically"
+      },
+      "hyperspell": {
+        "enabled": true,
+        "type": "memory",
+        "config": {
+          "apiKeyEnv": "HYPERSPELL_API_KEY",
+          "knowledgeGraph": true,
+          "contextInjection": "before_each_step",
+          "maxContextTokens": 4096
+        },
+        "description": "Knowledge graph memory - retrieval-augmented context injection per step"
+      },
+      "foundry": {
+        "enabled": true,
+        "type": "mcp",
+        "mcpServer": "mcp-foundry",
+        "config": {
+          "apiKeyEnv": "AZURE_AI_FOUNDRY_KEY",
+          "endpointEnv": "AZURE_AI_FOUNDRY_ENDPOINT",
+          "autoGenerateTools": true,
+          "persistTools": true,
+          "toolStorePath": "/data/memory/foundry-tools"
+        },
+        "description": "Watches workflows and generates persistent tool definitions from repeated patterns"
+      },
+      "opik": {
+        "enabled": true,
+        "type": "tracing",
+        "config": {
+          "selfHosted": true,
+          "project": "openclaw",
+          "captureSpans": ["llm_call", "tool_input", "tool_output", "latency", "token_usage"],
+          "tracePath": "/data/traces",
+          "uiPort": 5173
+        },
+        "description": "Structured tracing - captures full execution paths with spans for debugging"
+      }
+    }
+  }
+}

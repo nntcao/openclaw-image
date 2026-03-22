@@ -1,0 +1,77 @@
+# =============================================================================
+# OpenClaw Cron Jobs
+# Format: minute hour day month weekday user command
+# Times are in container timezone (set TZ env var)
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# PROACTIVE ASSISTANT
+# ---------------------------------------------------------------------------
+
+# Morning briefing - daily at 7:00 AM
+0 7 * * * openclaw /opt/openclaw/proactive/morning-briefing.sh >> /var/log/openclaw/morning-briefing.log 2>&1
+
+# Email triage - every 30 min during waking hours (7 AM - 10 PM)
+*/30 7-22 * * * openclaw /opt/openclaw/proactive/email-triage.sh >> /var/log/openclaw/email-triage.log 2>&1
+
+# Calendar reminders - every 15 min during waking hours
+*/15 7-22 * * * openclaw /opt/openclaw/proactive/calendar-reminders.sh >> /var/log/openclaw/calendar-reminders.log 2>&1
+
+# News digest - daily at 9:30 AM
+30 9 * * * openclaw /opt/openclaw/proactive/news-digest.sh >> /var/log/openclaw/news-digest.log 2>&1
+
+# Habit check-in - daily at 8:00 PM
+0 20 * * * openclaw /opt/openclaw/proactive/habit-checkin.sh >> /var/log/openclaw/habit-checkin.log 2>&1
+
+# Evening recap - daily at 6:30 PM
+30 18 * * * openclaw /opt/openclaw/proactive/evening-recap.sh >> /var/log/openclaw/evening-recap.log 2>&1
+
+# Weekly review - Sunday at 10:00 AM
+0 10 * * 0 openclaw /opt/openclaw/proactive/weekly-review.sh >> /var/log/openclaw/weekly-review.log 2>&1
+
+# ---------------------------------------------------------------------------
+# PLUGIN MAINTENANCE
+# ---------------------------------------------------------------------------
+
+# Memory consolidation - compact and optimize memory storage every 6 hours
+0 */6 * * * openclaw /opt/openclaw/bin/openclaw memory consolidate --config /home/openclaw/.openclaw/config.json >> /var/log/openclaw/memory-consolidation.log 2>&1
+
+# Lossless-Claw DAG compaction - rebuild summary DAG daily at 3 AM
+0 3 * * * openclaw /opt/plugins/lossless-claw/bin/lcm compact --db /data/sqlite/lcm.db >> /var/log/openclaw/lcm-compact.log 2>&1
+
+# Session cleanup - archive sessions older than 30 days, weekly on Sunday
+0 4 * * 0 openclaw find /data/sessions -type f -mtime +30 -exec mv {} /data/sessions/archive/ \; >> /var/log/openclaw/session-cleanup.log 2>&1
+
+# Opik trace rotation - compress traces older than 7 days
+0 2 * * * openclaw find /data/traces -name "*.json" -mtime +7 -exec gzip {} \; >> /var/log/openclaw/trace-rotation.log 2>&1
+
+# Composio token refresh check - verify all OAuth tokens are valid
+*/30 * * * * openclaw /opt/openclaw-py/bin/python3 -c "from composio import Composio; c = Composio(); c.check_connections()" >> /var/log/openclaw/composio-refresh.log 2>&1
+
+# Foundry tool index rebuild - reindex generated tools weekly
+0 5 * * 1 openclaw ls /data/memory/foundry-tools/*.json 2>/dev/null | wc -l >> /var/log/openclaw/foundry-tools.log 2>&1
+
+# Hyperspell sync status check
+*/15 * * * * openclaw /opt/openclaw-py/bin/python3 -c "import hyperspell; print(hyperspell.sync_status())" >> /var/log/openclaw/hyperspell-sync.log 2>&1
+
+# ---------------------------------------------------------------------------
+# INFRASTRUCTURE & SECURITY
+# ---------------------------------------------------------------------------
+
+# Watchdog - service health monitor every 5 minutes
+*/5 * * * * root /watchdog.sh >> /var/log/openclaw/watchdog.log 2>&1
+
+# Automated backup - daily at 2:00 AM
+0 2 * * * root /backup.sh >> /var/log/openclaw/backup.log 2>&1
+
+# Security audit - daily at 5:00 AM
+0 5 * * * root /security-audit.sh >> /var/log/openclaw/security-audit.log 2>&1
+
+# Log rotation - via logrotate daily
+0 0 * * * root /usr/sbin/logrotate /etc/logrotate.d/openclaw >> /var/log/openclaw/logrotate.log 2>&1
+
+# SSL certificate renewal check (Caddy handles auto-renewal, this just logs status)
+0 6 * * * root caddy validate --config /etc/caddy/Caddyfile >> /var/log/caddy/cert-check.log 2>&1
+
+# System health report - daily summary
+0 8 * * * openclaw /opt/openclaw/bin/openclaw status --json >> /var/log/openclaw/daily-health.log 2>&1

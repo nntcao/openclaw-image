@@ -1,0 +1,40 @@
+{
+  "mcpServers": {
+    "composio-mcp": {
+      "command": "composio-mcp",
+      "args": ["serve"],
+      "env": {
+        "COMPOSIO_API_KEY": "${COMPOSIO_API_KEY}"
+      },
+      "toolkits": [
+        "gmail",
+        "google-calendar",
+        "github",
+        "slack",
+        "notion",
+        "google-drive",
+        "trello",
+        "linear"
+      ],
+      "isolateIntegrations": true,
+      "autoRefreshTokens": true,
+      "healthCheck": {
+        "enabled": true,
+        "interval": "60s"
+      }
+    },
+    "mcp-foundry": {
+      "command": "mcp-foundry",
+      "args": ["--auto-discover"],
+      "env": {
+        "AZURE_AI_FOUNDRY_KEY": "${AZURE_AI_FOUNDRY_KEY}",
+        "AZURE_AI_FOUNDRY_ENDPOINT": "${AZURE_AI_FOUNDRY_ENDPOINT}"
+      },
+      "capabilities": {
+        "toolGeneration": true,
+        "persistGeneratedTools": true,
+        "toolStorePath": "/data/memory/foundry-tools"
+      }
+    }
+  }
+}

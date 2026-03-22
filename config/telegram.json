@@ -1,0 +1,70 @@
+{
+  "telegram": {
+    "botToken": "${TELEGRAM_BOT_TOKEN}",
+    "allowedUsers": "${TELEGRAM_ALLOWED_USERS}",
+    "polling": {
+      "enabled": true,
+      "interval": 1000
+    },
+    "webhook": {
+      "enabled": false,
+      "url": "${TELEGRAM_WEBHOOK_URL}",
+      "secretToken": "${TELEGRAM_WEBHOOK_SECRET}",
+      "maxConnections": 40,
+      "fallbackToPolling": true
+    },
+    "behavior": {
+      "parseMode": "MarkdownV2",
+      "maxMessageLength": 4096,
+      "splitLongMessages": true,
+      "typingIndicator": true,
+      "streamResponses": false,
+      "replyToMessages": true
+    },
+    "commands": [
+      {
+        "command": "start",
+        "description": "Start the assistant"
+      },
+      {
+        "command": "help",
+        "description": "Show available commands"
+      },
+      {
+        "command": "status",
+        "description": "System status and active tasks"
+      },
+      {
+        "command": "memory",
+        "description": "Search or manage memory"
+      },
+      {
+        "command": "tasks",
+        "description": "View active background tasks"
+      },
+      {
+        "command": "cron",
+        "description": "List scheduled jobs"
+      },
+      {
+        "command": "model",
+        "description": "Switch model tier (light/standard/heavy)"
+      },
+      {
+        "command": "trace",
+        "description": "View recent trace data"
+      }
+    ],
+    "fileHandling": {
+      "acceptFiles": true,
+      "maxFileSize": "20MB",
+      "supportedTypes": ["document", "photo", "audio", "video", "voice"],
+      "voiceTranscription": true
+    },
+    "security": {
+      "rejectUnknownUsers": true,
+      "logRejectedMessages": true,
+      "rateLimitPerUser": 30
+    }
+  }
+}

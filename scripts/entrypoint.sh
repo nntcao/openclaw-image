@@ -1,0 +1,211 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "=== OpenClaw Docker Image ==="
+echo "Starting initialization..."
+
+# ---------------------------------------------------------------------------
+# Create log directories
+# ---------------------------------------------------------------------------
+mkdir -p /var/log/openclaw /var/log/supervisor /var/log/caddy
+chown -R openclaw:openclaw /var/log/openclaw
+
+# ---------------------------------------------------------------------------
+# Tailscale (zero-trust VPN)
+# ---------------------------------------------------------------------------
+if [ -n "${TAILSCALE_AUTHKEY:-}" ]; then
+    echo "[init] Starting Tailscale..."
+    tailscaled --state=/data/tailscale/tailscaled.state &
+    sleep 2
+    tailscale up --authkey="${TAILSCALE_AUTHKEY}" --hostname="${TAILSCALE_HOSTNAME:-openclaw}" --ssh 2>/dev/null || true
+    TAILSCALE_IP=$(tailscale ip -4 2>/dev/null || echo "unknown")
+    echo "[init] Tailscale connected: $TAILSCALE_IP"
+    echo "[init] SSH accessible via: ssh openclaw@${TAILSCALE_HOSTNAME:-openclaw}"
+else
+    echo "[init] Tailscale disabled (set TAILSCALE_AUTHKEY to enable)"
+fi
+
+# ---------------------------------------------------------------------------
+# SSH setup
+# ---------------------------------------------------------------------------
+if [ "${SSH_ENABLE:-true}" = "true" ]; then
+    echo "[init] Configuring SSH..."
+
+    # Generate host keys if missing
+    ssh-keygen -A 2>/dev/null || true
+
+    # Fix permissions on mounted SSH dir
+    if [ -d /home/openclaw/.ssh ]; then
+        chown -R openclaw:openclaw /home/openclaw/.ssh
+        chmod 700 /home/openclaw/.ssh
+        [ -f /home/openclaw/.ssh/authorized_keys ] && chmod 600 /home/openclaw/.ssh/authorized_keys
+    fi
+
+    # FIDO2 / hardware key setup
+    if [ "${FIDO2_ENABLE:-false}" = "true" ]; then
+        echo "[init] FIDO2 hardware key support enabled"
+        # Start pcscd for smart card / YubiKey access
+        pcscd --daemon 2>/dev/null || true
+    fi
+
+    echo "[init] SSH ready on port 22"
+else
+    echo "[init] SSH disabled"
+fi
+
+# ---------------------------------------------------------------------------
+# Persistent data directory links
+# ---------------------------------------------------------------------------
+echo "[init] Linking persistent data..."
+
+# Symlink memory
+ln -sfn /data/memory /home/openclaw/.openclaw/memory
+ln -sfn /data/sessions /home/openclaw/.openclaw/sessions
+ln -sfn /data/traces /home/openclaw/.openclaw/traces
+
+# Ensure SQLite dir exists and is writable
+chown -R openclaw:openclaw /data/sqlite
+
+# ---------------------------------------------------------------------------
+# Plugin initialization
+# ---------------------------------------------------------------------------
+echo "[init] Initializing plugins..."
+
+# Lossless-Claw: ensure DB exists
+if [ "${LCM_ENABLED:-true}" = "true" ]; then
+    LCM_DB="${LCM_DB_PATH:-/data/sqlite/lcm.db}"
+    if [ ! -f "$LCM_DB" ]; then
+        echo "[init] Creating Lossless-Claw database at $LCM_DB"
+        su -c "sqlite3 '$LCM_DB' 'SELECT 1;'" openclaw
+    fi
+    echo "[init] Lossless-Claw enabled (threshold=${LCM_CONTEXT_THRESHOLD:-0.75}, tail=${LCM_FRESH_TAIL_COUNT:-32})"
+fi
+
+# Composio: verify API key
+if [ -n "${COMPOSIO_API_KEY:-}" ]; then
+    echo "[init] Composio MCP configured"
+else
+    echo "[init] WARNING: COMPOSIO_API_KEY not set - Composio integrations will be unavailable"
+fi
+
+# Hyperspell: verify API key
+if [ -n "${HYPERSPELL_API_KEY:-}" ]; then
+    echo "[init] Hyperspell memory backend configured"
+else
+    echo "[init] WARNING: HYPERSPELL_API_KEY not set - falling back to markdown memory"
+fi
+
+# Foundry: check config
+if [ -n "${AZURE_AI_FOUNDRY_KEY:-}" ]; then
+    mkdir -p /data/memory/foundry-tools
+    chown openclaw:openclaw /data/memory/foundry-tools
+    echo "[init] Foundry tool generation enabled"
+else
+    echo "[init] Foundry disabled (no AZURE_AI_FOUNDRY_KEY)"
+fi
+
+# Opik: configure tracing
+if [ "${OPIK_SELF_HOSTED:-true}" = "true" ]; then
+    mkdir -p /data/traces
+    chown openclaw:openclaw /data/traces
+    echo "[init] Opik self-hosted tracing on port 5173"
+elif [ -n "${OPIK_API_KEY:-}" ]; then
+    su -c "opik configure --api-key '${OPIK_API_KEY}' --workspace '${OPIK_WORKSPACE:-default}'" openclaw 2>/dev/null || true
+    echo "[init] Opik cloud tracing configured"
+fi
+
+# ---------------------------------------------------------------------------
+# Caddy (reverse proxy / HTTPS)
+# ---------------------------------------------------------------------------
+if [ "${CADDY_ENABLE:-false}" = "true" ]; then
+    mkdir -p /var/log/caddy /data/caddy
+    if [ -n "${DOMAIN:-}" ]; then
+        echo "[init] Caddy reverse proxy enabled for domain: $DOMAIN"
+        if [ -z "${ACME_EMAIL:-}" ]; then
+            echo "[init] WARNING: ACME_EMAIL not set - Let's Encrypt may fail"
+        fi
+    else
+        echo "[init] Caddy enabled (localhost mode - no SSL)"
+    fi
+else
+    echo "[init] Caddy disabled (direct port access)"
+fi
+
+# ---------------------------------------------------------------------------
+# Fail2Ban (brute-force protection)
+# ---------------------------------------------------------------------------
+if [ "${FAIL2BAN_ENABLE:-true}" = "true" ]; then
+    mkdir -p /var/run/fail2ban
+    echo "[init] Fail2Ban enabled — SSH (3 attempts/ban 2h), API (20/ban 30m)"
+else
+    echo "[init] Fail2Ban disabled"
+fi
+
+# ---------------------------------------------------------------------------
+# Backup configuration
+# ---------------------------------------------------------------------------
+mkdir -p /data/backups
+chown openclaw:openclaw /data/backups
+if [ -n "${BACKUP_REMOTE:-}" ]; then
+    echo "[init] Remote backup configured: $BACKUP_REMOTE"
+else
+    echo "[init] Local-only backups (set BACKUP_REMOTE for offsite sync)"
+fi
+
+# ---------------------------------------------------------------------------
+# Timezone
+# ---------------------------------------------------------------------------
+if [ -n "${TZ:-}" ]; then
+    echo "[init] Timezone: $TZ"
+    ln -sfn "/usr/share/zoneinfo/$TZ" /etc/localtime 2>/dev/null || true
+    echo "$TZ" > /etc/timezone 2>/dev/null || true
+else
+    echo "[init] Timezone: UTC (set TZ env var to change)"
+fi
+
+# ---------------------------------------------------------------------------
+# Proactive assistant config
+# ---------------------------------------------------------------------------
+echo "[init] Proactive assistant jobs configured:"
+echo "       07:00 - Morning briefing"
+echo "       09:30 - News digest"
+echo "       */30  - Email triage (7 AM - 10 PM)"
+echo "       */15  - Calendar reminders (7 AM - 10 PM)"
+echo "       18:30 - Evening recap"
+echo "       20:00 - Habit check-in"
+echo "       Sun   - Weekly review"
+
+# ---------------------------------------------------------------------------
+# Cron jobs
+# ---------------------------------------------------------------------------
+echo "[init] Setting up cron jobs..."
+crontab /etc/cron.d/openclaw-cron 2>/dev/null || true
+
+# ---------------------------------------------------------------------------
+# Config override merging
+# ---------------------------------------------------------------------------
+if [ -d /home/openclaw/.openclaw/config-override ] && [ "$(ls -A /home/openclaw/.openclaw/config-override 2>/dev/null)" ]; then
+    echo "[init] Merging config overrides..."
+    for f in /home/openclaw/.openclaw/config-override/*.json; do
+        [ -f "$f" ] && echo "[init]   Merged: $(basename "$f")"
+    done
+fi
+
+# ---------------------------------------------------------------------------
+# Verify core requirements
+# ---------------------------------------------------------------------------
+if [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -z "${OPENAI_API_KEY:-}" ] && [ -z "${OPENROUTER_API_KEY:-}" ] && [ -z "${GROQ_API_KEY:-}" ]; then
+    echo "[init] ERROR: At least one model provider API key is required"
+    echo "       Set ANTHROPIC_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY, or OPENAI_API_KEY"
+    exit 1
+fi
+
+if [ -z "${TELEGRAM_BOT_TOKEN:-}" ]; then
+    echo "[init] WARNING: TELEGRAM_BOT_TOKEN not set - Telegram channel will not start"
+fi
+
+# ---------------------------------------------------------------------------
+# Start
+# ---------------------------------------------------------------------------
+echo "[init] Initialization complete. Starting services..."
+exec /usr/bin/supervisord -c /etc/supervisor/conf.d/openclaw.conf
