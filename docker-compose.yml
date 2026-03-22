@@ -105,8 +105,10 @@ services:
     cap_add:
       - NET_BIND_SERVICE
       - NET_RAW
+      - NET_ADMIN        # Required for Tailscale, iptables, fail2ban
       - CHOWN
       - DAC_OVERRIDE
+      - FOWNER
       - SETUID
       - SETGID
     # Hardware security keys / TPM - uncomment if using

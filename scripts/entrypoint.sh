@@ -15,7 +15,13 @@ chown -R openclaw:openclaw /var/log/openclaw
 # ---------------------------------------------------------------------------
 if [ -n "${TAILSCALE_AUTHKEY:-}" ]; then
     echo "[init] Starting Tailscale..."
-    tailscaled --state=/data/tailscale/tailscaled.state &
+    # Use userspace networking — Docker containers typically lack /dev/net/tun
+    TS_FLAGS="--state=/data/tailscale/tailscaled.state"
+    if [ ! -e /dev/net/tun ]; then
+        echo "[init] No /dev/net/tun — using Tailscale userspace networking"
+        TS_FLAGS="$TS_FLAGS --tun=userspace-networking"
+    fi
+    tailscaled $TS_FLAGS &
     sleep 2
     tailscale up --authkey="${TAILSCALE_AUTHKEY}" --hostname="${TAILSCALE_HOSTNAME:-openclaw}" --ssh 2>/dev/null || true
     TAILSCALE_IP=$(tailscale ip -4 2>/dev/null || echo "unknown")
@@ -34,11 +40,11 @@ if [ "${SSH_ENABLE:-true}" = "true" ]; then
     # Generate host keys if missing
     ssh-keygen -A 2>/dev/null || true
 
-    # Fix permissions on mounted SSH dir
+    # Fix permissions on mounted SSH dir (may be read-only mount, so don't fail)
     if [ -d /home/openclaw/.ssh ]; then
-        chown -R openclaw:openclaw /home/openclaw/.ssh
-        chmod 700 /home/openclaw/.ssh
-        [ -f /home/openclaw/.ssh/authorized_keys ] && chmod 600 /home/openclaw/.ssh/authorized_keys
+        chown -R openclaw:openclaw /home/openclaw/.ssh 2>/dev/null || echo "[init] WARNING: .ssh is read-only, skipping chown (mount without :ro to fix)"
+        chmod 700 /home/openclaw/.ssh 2>/dev/null || true
+        [ -f /home/openclaw/.ssh/authorized_keys ] && chmod 600 /home/openclaw/.ssh/authorized_keys 2>/dev/null || true
     fi
 
     # FIDO2 / hardware key setup
