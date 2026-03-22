@@ -78,6 +78,33 @@ chown -R openclaw:openclaw /data/sqlite
 echo "[init] Initializing plugins..."
 OPENCLAW="/opt/openclaw/bin/openclaw"
 
+# Performance: compile cache and no self-respawn in containers
+export NODE_COMPILE_CACHE=/var/tmp/openclaw-compile-cache
+mkdir -p /var/tmp/openclaw-compile-cache
+chown openclaw:openclaw /var/tmp/openclaw-compile-cache
+export OPENCLAW_NO_RESPAWN=1
+
+# Configure gateway mode and auth before doctor runs
+echo "[init] Configuring gateway..."
+su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH $OPENCLAW config set gateway.mode local" openclaw 2>/dev/null || true
+
+# Generate gateway auth token if not already set
+if ! su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH $OPENCLAW config get gateway.token 2>/dev/null" | grep -q .; then
+    GW_TOKEN=$(openssl rand -hex 32)
+    su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH $OPENCLAW config set gateway.token '$GW_TOKEN'" openclaw 2>/dev/null || true
+    echo "[init] Gateway auth token generated"
+fi
+
+# Create required directories
+mkdir -p /home/openclaw/.openclaw/agents/main/sessions
+chown -R openclaw:openclaw /home/openclaw/.openclaw/agents
+chmod 700 /home/openclaw/.openclaw
+
+# Configure Telegram allowlist
+if [ -n "${TELEGRAM_ALLOWED_USERS:-}" ]; then
+    su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH $OPENCLAW config set channels.telegram.allowFrom '[\"$TELEGRAM_ALLOWED_USERS\"]'" openclaw 2>/dev/null || true
+fi
+
 # Run doctor to auto-configure stock plugins based on env/config
 echo "[init] Running openclaw doctor --fix..."
 su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH $OPENCLAW doctor --fix" openclaw 2>/dev/null || true
