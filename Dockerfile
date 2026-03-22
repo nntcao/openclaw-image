@@ -94,8 +94,13 @@ FROM base AS final
 LABEL maintainer="openclaw-image"
 LABEL description="OpenClaw AI Assistant with plugins, Telegram, SSH, hardware security"
 
-# Copy OpenClaw from pre-built image
+# Copy OpenClaw from pre-built image (Node.js app, entrypoint is openclaw.mjs)
 COPY --from=openclaw-prebuilt /app /opt/openclaw
+
+# Create CLI wrapper so /opt/openclaw/bin/openclaw works everywhere
+RUN mkdir -p /opt/openclaw/bin && \
+    printf '#!/bin/sh\nexec node /opt/openclaw/openclaw.mjs "$@"\n' > /opt/openclaw/bin/openclaw && \
+    chmod +x /opt/openclaw/bin/openclaw
 
 # Copy plugins (use wildcards to skip missing ones gracefully)
 COPY --from=plugins /opt/plugins /opt/plugins
@@ -126,6 +131,7 @@ RUN useradd -m -s /bin/bash openclaw && \
 # SSH Configuration
 # =============================================================================
 RUN mkdir -p /run/sshd && \
+    ssh-keygen -A && \
     sed -i 's/#PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config && \
     sed -i 's/#PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config && \
     sed -i 's/#PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config && \
