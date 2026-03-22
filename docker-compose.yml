@@ -30,20 +30,8 @@ services:
       - OPENCLAW_API_URL=${OPENCLAW_API_URL:-http://localhost:3000}
       - OPENCLAW_LOG_LEVEL=${OPENCLAW_LOG_LEVEL:-info}
 
-      # --- Model Provider Keys ---
+      # --- Anthropic ---
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
-      - GROQ_API_KEY=${GROQ_API_KEY:-}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
-
-      # --- Model Routing (free → cheap → standard → heavy) ---
-      - ROUTE_FREE_MODEL=${ROUTE_FREE_MODEL:-deepseek/deepseek-r1:free}
-      - ROUTE_CHEAP_MODEL=${ROUTE_CHEAP_MODEL:-llama-4-scout-17b-16e-instruct}
-      - ROUTE_CHEAP_PROVIDER=${ROUTE_CHEAP_PROVIDER:-groq}
-      - ROUTE_STANDARD_MODEL=${ROUTE_STANDARD_MODEL:-claude-sonnet-4-6}
-      - ROUTE_HEAVY_MODEL=${ROUTE_HEAVY_MODEL:-claude-opus-4-6}
-      - ROUTE_SUBAGENT_MODEL=${ROUTE_SUBAGENT_MODEL:-claude-sonnet-4-6}
 
       # --- Telegram ---
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}

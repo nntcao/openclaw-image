@@ -208,9 +208,8 @@ fi
 # ---------------------------------------------------------------------------
 # Verify core requirements
 # ---------------------------------------------------------------------------
-if [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -z "${OPENAI_API_KEY:-}" ] && [ -z "${OPENROUTER_API_KEY:-}" ] && [ -z "${GROQ_API_KEY:-}" ]; then
-    echo "[init] ERROR: At least one model provider API key is required"
-    echo "       Set ANTHROPIC_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY, or OPENAI_API_KEY"
+if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+    echo "[init] ERROR: ANTHROPIC_API_KEY is required"
     exit 1
 fi
 
