@@ -65,17 +65,6 @@ if command -v apt-get &> /dev/null; then
     fi
 fi
 
-# --- Check Fail2Ban status ---
-if command -v fail2ban-client &> /dev/null; then
-    BANNED=$(fail2ban-client status sshd 2>/dev/null | grep "Currently banned" | awk '{print $NF}' || echo 0)
-    TOTAL_BANNED=$(fail2ban-client status sshd 2>/dev/null | grep "Total banned" | awk '{print $NF}' || echo 0)
-    echo "[$(date -Iseconds)] Fail2Ban: $BANNED currently banned, $TOTAL_BANNED total" >> "$LOG"
-    if [ "$BANNED" -gt 10 ]; then
-        FINDINGS="${FINDINGS}\n⚠️ $BANNED IPs currently banned by Fail2Ban — possible ongoing attack"
-        [ "$SEVERITY" = "INFO" ] && SEVERITY="MEDIUM"
-    fi
-fi
-
 # --- Check OpenClaw security audit (if available) ---
 if [ -x /opt/openclaw/bin/openclaw ]; then
     /opt/openclaw/bin/openclaw security audit --deep >> "$LOG" 2>&1 || true

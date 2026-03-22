@@ -30,8 +30,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     cron \
     # SQLite (for lossless-claw)
     sqlite3 libsqlite3-dev \
-    # Security hardening
-    fail2ban iptables \
     # Reverse proxy
     debian-keyring debian-archive-keyring apt-transport-https \
     # Backup tools
@@ -128,8 +126,6 @@ COPY config/plugins.json /home/openclaw/.openclaw/plugins.json
 COPY config/telegram.json /home/openclaw/.openclaw/telegram.json
 COPY config/mcp-servers.json /home/openclaw/.openclaw/mcp-servers.json
 COPY config/Caddyfile /etc/caddy/Caddyfile
-COPY config/fail2ban/jail.local /etc/fail2ban/jail.local
-COPY config/fail2ban/filter.d/ /etc/fail2ban/filter.d/
 COPY scripts/crontab /etc/cron.d/openclaw-cron
 COPY scripts/entrypoint.sh /entrypoint.sh
 COPY scripts/healthcheck.sh /healthcheck.sh

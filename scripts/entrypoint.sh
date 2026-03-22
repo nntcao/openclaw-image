@@ -154,16 +154,6 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Fail2Ban (brute-force protection)
-# ---------------------------------------------------------------------------
-if [ "${FAIL2BAN_ENABLE:-true}" = "true" ]; then
-    mkdir -p /var/run/fail2ban
-    echo "[init] Fail2Ban enabled — SSH (3 attempts/ban 2h), API (20/ban 30m)"
-else
-    echo "[init] Fail2Ban disabled"
-fi
-
-# ---------------------------------------------------------------------------
 # Backup configuration
 # ---------------------------------------------------------------------------
 mkdir -p /data/backups
@@ -243,10 +233,6 @@ fi
 
 if [ "${CADDY_ENABLE:-false}" = "true" ]; then
     sed -i '/\[program:caddy\]/,/^\[/{s/autostart=false/autostart=true/}' "$SUPERVISOR_CONF"
-fi
-
-if [ "${FAIL2BAN_ENABLE:-true}" = "true" ]; then
-    sed -i '/\[program:fail2ban\]/,/^\[/{s/autostart=false/autostart=true/}' "$SUPERVISOR_CONF"
 fi
 
 echo "[init] Initialization complete. Starting services..."
