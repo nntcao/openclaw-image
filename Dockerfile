@@ -112,8 +112,7 @@ RUN mkdir -p /run/sshd && \
     sed -i 's/#PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config && \
     sed -i 's/#PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config && \
     sed -i 's/#PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config && \
-    sed -i 's/#ChallengeResponseAuthentication.*/ChallengeResponseAuthentication yes/' /etc/ssh/sshd_config && \
-    echo "AuthenticationMethods publickey,keyboard-interactive" >> /etc/ssh/sshd_config && \
+    echo "AuthenticationMethods publickey" >> /etc/ssh/sshd_config && \
     echo "AllowUsers openclaw" >> /etc/ssh/sshd_config && \
     # FIDO2/hardware key support
     echo "PubkeyAcceptedKeyTypes sk-ssh-ed25519@openssh.com,sk-ecdsa-sha2-nistp256@openssh.com,ssh-ed25519,ecdsa-sha2-nistp256" >> /etc/ssh/sshd_config
