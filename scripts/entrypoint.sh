@@ -100,9 +100,22 @@ mkdir -p /home/openclaw/.openclaw/agents/main/sessions
 chown -R openclaw:openclaw /home/openclaw/.openclaw/agents
 chmod 700 /home/openclaw/.openclaw
 
-# Configure Telegram allowlist
+# Configure Telegram
 if [ -n "${TELEGRAM_ALLOWED_USERS:-}" ]; then
-    su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH $OPENCLAW config set channels.telegram.allowFrom '[\"$TELEGRAM_ALLOWED_USERS\"]'" openclaw 2>/dev/null || true
+    echo "[init] Configuring Telegram..."
+    # Use allowlist policy (not pairing) since this is a headless server
+    su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH $OPENCLAW config set channels.telegram.dmPolicy allowlist" openclaw 2>/dev/null || true
+    # Set allowed user IDs (comma-separated → individual entries)
+    IFS=',' read -ra TG_USERS <<< "$TELEGRAM_ALLOWED_USERS"
+    ALLOW_JSON="["
+    for i in "${!TG_USERS[@]}"; do
+        uid=$(echo "${TG_USERS[$i]}" | xargs)
+        [ "$i" -gt 0 ] && ALLOW_JSON="${ALLOW_JSON},"
+        ALLOW_JSON="${ALLOW_JSON}\"${uid}\""
+    done
+    ALLOW_JSON="${ALLOW_JSON}]"
+    su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH $OPENCLAW config set channels.telegram.allowFrom '${ALLOW_JSON}'" openclaw 2>/dev/null || true
+    echo "[init] Telegram DM policy: allowlist, allowed users: ${ALLOW_JSON}"
 fi
 
 # Run doctor to auto-configure stock plugins based on env/config
