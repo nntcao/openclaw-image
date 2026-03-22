@@ -82,6 +82,18 @@ OPENCLAW="/opt/openclaw/bin/openclaw"
 echo "[init] Running openclaw doctor --fix..."
 su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH $OPENCLAW doctor --fix" openclaw 2>/dev/null || true
 
+# Install Lossless-Claw plugin (idempotent — skips if already installed)
+if [ "${LCM_ENABLED:-true}" = "true" ]; then
+    echo "[init] Checking Lossless-Claw plugin..."
+    if ! su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH $OPENCLAW plugins list 2>/dev/null | grep -q lossless-claw"; then
+        echo "[init] Installing Lossless-Claw plugin..."
+        su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH $OPENCLAW plugins install @martian-engineering/lossless-claw" openclaw || \
+            echo "[init] WARNING: Lossless-Claw plugin install failed — context management unavailable"
+    else
+        echo "[init] Lossless-Claw plugin already installed"
+    fi
+fi
+
 # Lossless-Claw: ensure DB exists
 if [ "${LCM_ENABLED:-true}" = "true" ]; then
     LCM_DB="${LCM_DB_PATH:-/data/sqlite/lcm.db}"
@@ -92,6 +104,10 @@ if [ "${LCM_ENABLED:-true}" = "true" ]; then
     echo "[init] Lossless-Claw enabled (threshold=${LCM_CONTEXT_THRESHOLD:-0.75}, tail=${LCM_FRESH_TAIL_COUNT:-32})"
 fi
 
+# External integrations status
+[ -n "${COMPOSIO_API_KEY:-}" ] && echo "[init] Composio API key configured" || echo "[init] Composio disabled (no COMPOSIO_API_KEY)"
+[ -n "${HYPERSPELL_API_KEY:-}" ] && echo "[init] Hyperspell memory configured" || echo "[init] Hyperspell disabled (no HYPERSPELL_API_KEY)"
+[ -n "${OPIK_API_KEY:-}" ] || [ "${OPIK_SELF_HOSTED:-true}" = "true" ] && echo "[init] Opik tracing enabled" || echo "[init] Opik disabled"
 
 # ---------------------------------------------------------------------------
 # Caddy (reverse proxy / HTTPS)

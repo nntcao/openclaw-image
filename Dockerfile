@@ -78,6 +78,15 @@ RUN mkdir -p /opt/openclaw/bin && \
 
 ENV PATH="/opt/openclaw-py/bin:/opt/openclaw/bin:${PATH}"
 
+# Install external integrations (Python SDKs)
+# These MUST succeed — no || true
+RUN /opt/openclaw-py/bin/pip install --no-cache-dir \
+    composio-core \
+    opik
+
+# Note: hyperspell and foundry are installed at runtime via OpenClaw's
+# plugin system or MCP config, not as standalone packages.
+
 # Create openclaw user
 RUN useradd -m -s /bin/bash openclaw && \
     mkdir -p /home/openclaw/.openclaw \
