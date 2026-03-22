@@ -61,32 +61,6 @@ ENV PATH="/opt/openclaw-py/bin:${PATH}"
 FROM alpine/openclaw:latest AS openclaw-prebuilt
 
 # =============================================================================
-# Stage: Install Plugins
-# =============================================================================
-FROM base AS plugins
-
-WORKDIR /opt/plugins
-
-# --- Lossless-Claw (context management) ---
-# TypeScript consumed directly. TUI built via Go (repo uses goreleaser, not make).
-RUN git clone --depth 1 https://github.com/Martian-Engineering/lossless-claw.git && \
-    cd lossless-claw && npm ci
-RUN cd /opt/plugins/lossless-claw/tui && \
-    go build -o /usr/local/bin/lcm ./...
-
-# --- Composio (integrations via MCP — server created programmatically via SDK) ---
-RUN /opt/openclaw-py/bin/pip install --no-cache-dir composio-core
-
-# --- Hyperspell ---
-RUN /opt/openclaw-py/bin/pip install --no-cache-dir hyperspell
-
-# --- Foundry (Azure AI Foundry MCP) ---
-RUN npm install -g @anthropic-ai/mcp || true
-
-# --- Opik (tracing / observability) ---
-RUN /opt/openclaw-py/bin/pip install --no-cache-dir opik
-
-# =============================================================================
 # Stage: Final Image
 # =============================================================================
 FROM base AS final
@@ -101,12 +75,6 @@ COPY --from=openclaw-prebuilt /app /opt/openclaw
 RUN mkdir -p /opt/openclaw/bin && \
     printf '#!/bin/sh\nexec node /opt/openclaw/openclaw.mjs "$@"\n' > /opt/openclaw/bin/openclaw && \
     chmod +x /opt/openclaw/bin/openclaw
-
-# Copy plugins (use wildcards to skip missing ones gracefully)
-COPY --from=plugins /opt/plugins /opt/plugins
-COPY --from=plugins /opt/openclaw-py /opt/openclaw-py
-COPY --from=plugins /usr/local/lib/node_modules /usr/local/lib/node_modules
-COPY --from=plugins /usr/local/bin /usr/local/bin
 
 ENV PATH="/opt/openclaw-py/bin:/opt/openclaw/bin:${PATH}"
 
@@ -160,7 +128,6 @@ COPY scripts/healthcheck.sh /healthcheck.sh
 COPY scripts/watchdog.sh /watchdog.sh
 COPY scripts/backup.sh /backup.sh
 COPY scripts/security-audit.sh /security-audit.sh
-COPY scripts/composio-mcp.py /opt/openclaw/scripts/composio-mcp.py
 COPY scripts/proactive/ /opt/openclaw/proactive/
 COPY config/supervisord.conf /etc/supervisor/conf.d/openclaw.conf
 COPY config/logrotate.conf /etc/logrotate.d/openclaw

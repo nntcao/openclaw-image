@@ -73,9 +73,29 @@ ln -sfn /data/traces /home/openclaw/.openclaw/traces
 chown -R openclaw:openclaw /data/sqlite
 
 # ---------------------------------------------------------------------------
-# Plugin initialization
+# Plugin initialization (via OpenClaw's built-in plugin system)
 # ---------------------------------------------------------------------------
 echo "[init] Initializing plugins..."
+OPENCLAW="/opt/openclaw/bin/openclaw"
+
+# Install plugins if not already present (fail gracefully)
+install_plugin() {
+    local plugin="$1"
+    if ! su -c "$OPENCLAW plugins list 2>/dev/null" openclaw | grep -q "$plugin"; then
+        echo "[init] Installing plugin: $plugin"
+        su -c "$OPENCLAW plugins install $plugin 2>/dev/null" openclaw || echo "[init] WARNING: Failed to install $plugin (skipping)"
+    else
+        echo "[init] Plugin already installed: $plugin"
+    fi
+}
+
+# Core plugins
+install_plugin "composio"
+install_plugin "opik"
+
+# Run doctor to auto-configure based on env
+echo "[init] Running openclaw doctor..."
+su -c "$OPENCLAW doctor --fix 2>/dev/null" openclaw || true
 
 # Lossless-Claw: ensure DB exists
 if [ "${LCM_ENABLED:-true}" = "true" ]; then
@@ -87,37 +107,17 @@ if [ "${LCM_ENABLED:-true}" = "true" ]; then
     echo "[init] Lossless-Claw enabled (threshold=${LCM_CONTEXT_THRESHOLD:-0.75}, tail=${LCM_FRESH_TAIL_COUNT:-32})"
 fi
 
-# Composio: verify API key
+# Log plugin status
 if [ -n "${COMPOSIO_API_KEY:-}" ]; then
-    echo "[init] Composio MCP configured"
+    echo "[init] Composio configured"
 else
-    echo "[init] WARNING: COMPOSIO_API_KEY not set - Composio integrations will be unavailable"
+    echo "[init] WARNING: COMPOSIO_API_KEY not set - Composio integrations unavailable"
 fi
 
-# Hyperspell: verify API key
 if [ -n "${HYPERSPELL_API_KEY:-}" ]; then
     echo "[init] Hyperspell memory backend configured"
 else
     echo "[init] WARNING: HYPERSPELL_API_KEY not set - falling back to markdown memory"
-fi
-
-# Foundry: check config
-if [ -n "${AZURE_AI_FOUNDRY_KEY:-}" ]; then
-    mkdir -p /data/memory/foundry-tools
-    chown openclaw:openclaw /data/memory/foundry-tools
-    echo "[init] Foundry tool generation enabled"
-else
-    echo "[init] Foundry disabled (no AZURE_AI_FOUNDRY_KEY)"
-fi
-
-# Opik: configure tracing
-if [ "${OPIK_SELF_HOSTED:-true}" = "true" ]; then
-    mkdir -p /data/traces
-    chown openclaw:openclaw /data/traces
-    echo "[init] Opik self-hosted tracing on port 5173"
-elif [ -n "${OPIK_API_KEY:-}" ]; then
-    su -c "opik configure --api-key '${OPIK_API_KEY}' --workspace '${OPIK_WORKSPACE:-default}'" openclaw 2>/dev/null || true
-    echo "[init] Opik cloud tracing configured"
 fi
 
 # ---------------------------------------------------------------------------
@@ -223,10 +223,6 @@ SUPERVISOR_CONF="/etc/supervisor/conf.d/openclaw.conf"
 
 if [ "${SSH_ENABLE:-true}" = "true" ]; then
     sed -i '/\[program:sshd\]/,/^\[/{s/autostart=false/autostart=true/}' "$SUPERVISOR_CONF"
-fi
-
-if [ "${OPIK_SELF_HOSTED:-true}" = "true" ]; then
-    sed -i '/\[program:opik\]/,/^\[/{s/autostart=false/autostart=true/}' "$SUPERVISOR_CONF"
 fi
 
 if [ "${CADDY_ENABLE:-false}" = "true" ]; then
