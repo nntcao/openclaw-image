@@ -95,7 +95,7 @@ LABEL maintainer="openclaw-image"
 LABEL description="OpenClaw AI Assistant with plugins, Telegram, SSH, hardware security"
 
 # Copy OpenClaw from pre-built image
-COPY --from=openclaw-prebuilt /opt/openclaw /opt/openclaw
+COPY --from=openclaw-prebuilt /app /opt/openclaw
 
 # Copy plugins (use wildcards to skip missing ones gracefully)
 COPY --from=plugins /opt/plugins /opt/plugins
