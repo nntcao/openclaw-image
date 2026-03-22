@@ -74,8 +74,8 @@ RUN git clone --depth 1 https://github.com/Martian-Engineering/lossless-claw.git
 RUN cd /opt/plugins/lossless-claw/tui && \
     go build -o /usr/local/bin/lcm ./...
 
-# --- Composio MCP Server ---
-RUN /opt/openclaw-py/bin/pip install --no-cache-dir composio-core composio-mcp
+# --- Composio (integrations via MCP — server created programmatically via SDK) ---
+RUN /opt/openclaw-py/bin/pip install --no-cache-dir composio-core
 
 # --- Hyperspell ---
 RUN /opt/openclaw-py/bin/pip install --no-cache-dir hyperspell
@@ -154,6 +154,7 @@ COPY scripts/healthcheck.sh /healthcheck.sh
 COPY scripts/watchdog.sh /watchdog.sh
 COPY scripts/backup.sh /backup.sh
 COPY scripts/security-audit.sh /security-audit.sh
+COPY scripts/composio-mcp.py /opt/openclaw/scripts/composio-mcp.py
 COPY scripts/proactive/ /opt/openclaw/proactive/
 COPY config/supervisord.conf /etc/supervisor/conf.d/openclaw.conf
 COPY config/logrotate.conf /etc/logrotate.d/openclaw
