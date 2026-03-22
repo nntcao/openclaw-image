@@ -56,16 +56,9 @@ RUN python3 -m venv /opt/openclaw-py && \
 ENV PATH="/opt/openclaw-py/bin:${PATH}"
 
 # =============================================================================
-# Stage: Install OpenClaw
+# Stage: OpenClaw (use pre-built community image)
 # =============================================================================
-FROM base AS openclaw-install
-
-WORKDIR /opt/openclaw
-
-# Clone OpenClaw
-RUN git clone --depth 1 https://github.com/openclaw/openclaw.git . && \
-    npm ci --production=false && \
-    npm run build
+FROM alpine/openclaw:latest AS openclaw-prebuilt
 
 # =============================================================================
 # Stage: Install Plugins
@@ -104,8 +97,8 @@ FROM base AS final
 LABEL maintainer="openclaw-image"
 LABEL description="OpenClaw AI Assistant with plugins, Telegram, SSH, hardware security"
 
-# Copy OpenClaw
-COPY --from=openclaw-install /opt/openclaw /opt/openclaw
+# Copy OpenClaw from pre-built image
+COPY --from=openclaw-prebuilt /opt/openclaw /opt/openclaw
 
 # Copy plugins
 COPY --from=plugins /opt/plugins /opt/plugins
