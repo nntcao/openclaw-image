@@ -68,29 +68,23 @@ FROM base AS plugins
 WORKDIR /opt/plugins
 
 # --- Lossless-Claw (context management) ---
+# No build step — TypeScript consumed directly. TUI built separately via Go.
 RUN git clone --depth 1 https://github.com/Martian-Engineering/lossless-claw.git && \
-    cd lossless-claw && \
-    npm ci && npm run build && \
-    cd tui && go build -o /usr/local/bin/lcm-tui . \
-    || echo "WARN: lossless-claw install failed — skipping"
+    cd lossless-claw && npm ci
+RUN cd /opt/plugins/lossless-claw/tui && make build && make install
 
 # --- Composio MCP Server ---
-RUN /opt/openclaw-py/bin/pip install --no-cache-dir composio-core \
-    || echo "WARN: composio-core install failed — skipping"
-RUN npm install -g composio-mcp \
-    || echo "WARN: composio-mcp install failed — skipping"
+RUN /opt/openclaw-py/bin/pip install --no-cache-dir composio-core
+RUN npm install -g composio-mcp
 
 # --- Hyperspell ---
-RUN /opt/openclaw-py/bin/pip install --no-cache-dir hyperspell \
-    || echo "WARN: hyperspell install failed — skipping"
+RUN /opt/openclaw-py/bin/pip install --no-cache-dir hyperspell
 
 # --- Foundry (Azure AI Foundry MCP) ---
-RUN npm install -g @anthropic-ai/mcp \
-    || echo "WARN: mcp install failed — skipping"
+RUN npm install -g @anthropic-ai/mcp
 
 # --- Opik (tracing / observability) ---
-RUN /opt/openclaw-py/bin/pip install --no-cache-dir opik \
-    || echo "WARN: opik install failed — skipping"
+RUN /opt/openclaw-py/bin/pip install --no-cache-dir opik
 
 # =============================================================================
 # Stage: Final Image
