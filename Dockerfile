@@ -34,6 +34,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     debian-keyring debian-archive-keyring apt-transport-https \
     # Backup tools
     rclone \
+    # Runtime package management & admin
+    sudo apt-utils \
     # Misc
     dnsutils iputils-ping net-tools supervisor logrotate \
     && rm -rf /var/lib/apt/lists/*
@@ -100,7 +102,9 @@ RUN useradd -m -s /bin/bash openclaw && \
              /data/sqlite \
              /data/backups \
              /var/log/caddy && \
-    chown -R openclaw:openclaw /home/openclaw /data /var/log/caddy
+    chown -R openclaw:openclaw /home/openclaw /data /var/log/caddy && \
+    echo "openclaw ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/openclaw && \
+    chmod 0440 /etc/sudoers.d/openclaw
 
 # =============================================================================
 # SSH Configuration

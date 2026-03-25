@@ -81,22 +81,11 @@ services:
       # --- Memory ---
       - MEMORY_BACKEND=${MEMORY_BACKEND:-hyperspell}
       - MEMORY_PERSIST_PATH=/data/memory
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
-    cap_add:
-      - NET_BIND_SERVICE
-      - NET_ADMIN        # Required for Tailscale
-      - CHOWN
-      - DAC_OVERRIDE
-      - FOWNER
-      - SETUID
-      - SETGID
-    # Hardware security keys / TPM - uncomment if using
-    # devices:
-    #   - /dev/bus/usb:/dev/bus/usb
-    #   - /dev/tpm0:/dev/tpm0
+    privileged: true                       # Unrestricted: install packages, run apps, full device access
+    # Hardware security keys / TPM - available via privileged mode
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
+      - /dev/tpm0:/dev/tpm0
     healthcheck:
       test: ["CMD", "/healthcheck.sh"]
       interval: 30s
