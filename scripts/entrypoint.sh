@@ -4,6 +4,11 @@ set -euo pipefail
 echo "=== OpenClaw Docker Image ==="
 echo "Starting initialization..."
 
+# Run everything as root — agent gets full system access
+export HOME="/home/openclaw"
+export OPENCLAW_STATE_DIR="/home/openclaw/.openclaw"
+export PATH="/opt/openclaw/bin:/opt/openclaw-py/bin:${PATH}"
+
 # ---------------------------------------------------------------------------
 # Create log directories
 # ---------------------------------------------------------------------------
@@ -86,12 +91,12 @@ export OPENCLAW_NO_RESPAWN=1
 
 # Configure gateway mode and auth before doctor runs
 echo "[init] Configuring gateway..."
-su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH $OPENCLAW config set gateway.mode local" openclaw 2>/dev/null || true
+$OPENCLAW config set gateway.mode local 2>/dev/null || true
 
 # Generate gateway auth token if not already set
-if ! su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH $OPENCLAW config get gateway.token 2>/dev/null" | grep -q .; then
+if ! $OPENCLAW config get gateway.token 2>/dev/null | grep -q .; then
     GW_TOKEN=$(openssl rand -hex 32)
-    su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH $OPENCLAW config set gateway.token '$GW_TOKEN'" openclaw 2>/dev/null || true
+    $OPENCLAW config set gateway.token "$GW_TOKEN" 2>/dev/null || true
     echo "[init] Gateway auth token generated"
 fi
 
@@ -104,7 +109,7 @@ chmod 700 /home/openclaw/.openclaw
 if [ -n "${TELEGRAM_ALLOWED_USERS:-}" ]; then
     echo "[init] Configuring Telegram..."
     # Use allowlist policy (not pairing) since this is a headless server
-    su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH $OPENCLAW config set channels.telegram.dmPolicy allowlist" openclaw 2>/dev/null || true
+    $OPENCLAW config set channels.telegram.dmPolicy allowlist 2>/dev/null || true
     # Set allowed user IDs (comma-separated → individual entries)
     IFS=',' read -ra TG_USERS <<< "$TELEGRAM_ALLOWED_USERS"
     ALLOW_JSON="["
@@ -114,22 +119,22 @@ if [ -n "${TELEGRAM_ALLOWED_USERS:-}" ]; then
         ALLOW_JSON="${ALLOW_JSON}\"${uid}\""
     done
     ALLOW_JSON="${ALLOW_JSON}]"
-    su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH $OPENCLAW config set channels.telegram.allowFrom '${ALLOW_JSON}'" openclaw 2>/dev/null || true
+    $OPENCLAW config set channels.telegram.allowFrom "${ALLOW_JSON}" 2>/dev/null || true
     echo "[init] Telegram DM policy: allowlist, allowed users: ${ALLOW_JSON}"
 fi
 
 # Run doctor to auto-configure stock plugins based on env/config
 echo "[init] Running openclaw doctor --fix..."
-su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH $OPENCLAW doctor --fix" openclaw 2>/dev/null || true
+$OPENCLAW doctor --fix 2>/dev/null || true
 
 # Lossless-Claw plugin: pre-installed in Docker image at build time.
 # Only install at runtime if somehow missing (e.g. volume overwrote plugin dir).
 if [ "${LCM_ENABLED:-true}" = "true" ]; then
-    if su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH $OPENCLAW plugins list 2>/dev/null" | grep -q lossless-claw; then
+    if $OPENCLAW plugins list 2>/dev/null | grep -q lossless-claw; then
         echo "[init] Lossless-Claw plugin present (cached in image)"
     else
         echo "[init] Lossless-Claw plugin missing — installing..."
-        su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH $OPENCLAW plugins install @martian-engineering/lossless-claw" openclaw || \
+        $OPENCLAW plugins install @martian-engineering/lossless-claw || \
             echo "[init] WARNING: Lossless-Claw plugin install failed"
     fi
 fi
@@ -139,7 +144,7 @@ if [ "${LCM_ENABLED:-true}" = "true" ]; then
     LCM_DB="${LCM_DB_PATH:-/data/sqlite/lcm.db}"
     if [ ! -f "$LCM_DB" ]; then
         echo "[init] Creating Lossless-Claw database at $LCM_DB"
-        su -c "sqlite3 '$LCM_DB' 'SELECT 1;'" openclaw
+        sqlite3 "$LCM_DB" 'SELECT 1;'
     fi
     echo "[init] Lossless-Claw enabled (threshold=${LCM_CONTEXT_THRESHOLD:-0.75}, tail=${LCM_FRESH_TAIL_COUNT:-32})"
 fi

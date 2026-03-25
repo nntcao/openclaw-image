@@ -82,10 +82,10 @@ services:
       - MEMORY_BACKEND=${MEMORY_BACKEND:-hyperspell}
       - MEMORY_PERSIST_PATH=/data/memory
     privileged: true                       # Unrestricted: install packages, run apps, full device access
-    # Hardware security keys / TPM - available via privileged mode
-    devices:
-      - /dev/bus/usb:/dev/bus/usb
-      - /dev/tpm0:/dev/tpm0
+    # Hardware security keys / TPM (Linux hosts only — comment out on Windows/macOS)
+    # devices:
+    #   - /dev/bus/usb:/dev/bus/usb
+    #   - /dev/tpm0:/dev/tpm0
     healthcheck:
       test: ["CMD", "/healthcheck.sh"]
       interval: 30s
