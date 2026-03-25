@@ -82,6 +82,9 @@ services:
       - MEMORY_BACKEND=${MEMORY_BACKEND:-hyperspell}
       - MEMORY_PERSIST_PATH=/data/memory
     privileged: true                       # Unrestricted: install packages, run apps, full device access
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     # Hardware security keys / TPM (Linux hosts only — comment out on Windows/macOS)
     # devices:
     #   - /dev/bus/usb:/dev/bus/usb

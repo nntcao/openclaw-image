@@ -91,7 +91,8 @@ export OPENCLAW_NO_RESPAWN=1
 
 # Configure gateway mode and auth before doctor runs
 echo "[init] Configuring gateway..."
-$OPENCLAW config set gateway.mode local 2>/dev/null || true
+$OPENCLAW config set gateway.mode server 2>/dev/null || true
+$OPENCLAW config set gateway.bind "0.0.0.0" 2>/dev/null || true
 
 # Generate gateway auth token if not already set
 if ! $OPENCLAW config get gateway.token 2>/dev/null | grep -q .; then
