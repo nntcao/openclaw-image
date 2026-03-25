@@ -142,6 +142,23 @@ RUN chmod +x /entrypoint.sh /healthcheck.sh /watchdog.sh /backup.sh /security-au
     chmod 0644 /etc/cron.d/openclaw-cron && \
     chown -R openclaw:openclaw /home/openclaw/.openclaw
 
+# =============================================================================
+# Pre-install plugins at build time (cached in image layer)
+# =============================================================================
+RUN mkdir -p /home/openclaw/.openclaw/agents/main/sessions && \
+    chown -R openclaw:openclaw /home/openclaw/.openclaw && \
+    su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH openclaw plugins install @martian-engineering/lossless-claw" openclaw && \
+    echo "[build] Lossless-Claw plugin pre-installed"
+
+# Pre-configure default model (Haiku) and model aliases
+RUN su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH \
+    openclaw models set claude-haiku-4-5-20251001 && \
+    openclaw models aliases add light claude-haiku-4-5-20251001 && \
+    openclaw models aliases add mid claude-sonnet-4-6 && \
+    openclaw models aliases add heavy claude-opus-4-6 && \
+    openclaw models fallbacks add claude-opus-4-6" openclaw && \
+    echo "[build] Models: default=haiku, mid=sonnet, heavy=opus, fallback=opus"
+
 # Volumes for persistent data
 RUN mkdir -p /data/tailscale /data/sessions/archive /var/log/openclaw /var/log/supervisor
 

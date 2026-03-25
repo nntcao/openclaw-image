@@ -2,6 +2,15 @@
   "gateway": {
     "mode": "local"
   },
+  "models": {
+    "default": "claude-haiku-4-5-20251001",
+    "aliases": {
+      "light": "claude-haiku-4-5-20251001",
+      "mid": "claude-sonnet-4-6",
+      "heavy": "claude-opus-4-6"
+    },
+    "fallbacks": ["claude-opus-4-6"]
+  },
   "channels": {
     "telegram": {
       "enabled": true,

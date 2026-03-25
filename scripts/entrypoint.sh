@@ -122,15 +122,15 @@ fi
 echo "[init] Running openclaw doctor --fix..."
 su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH $OPENCLAW doctor --fix" openclaw 2>/dev/null || true
 
-# Install Lossless-Claw plugin (idempotent — skips if already installed)
+# Lossless-Claw plugin: pre-installed in Docker image at build time.
+# Only install at runtime if somehow missing (e.g. volume overwrote plugin dir).
 if [ "${LCM_ENABLED:-true}" = "true" ]; then
-    echo "[init] Checking Lossless-Claw plugin..."
-    if ! su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH $OPENCLAW plugins list 2>/dev/null | grep -q lossless-claw"; then
-        echo "[init] Installing Lossless-Claw plugin..."
-        su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH $OPENCLAW plugins install @martian-engineering/lossless-claw" openclaw || \
-            echo "[init] WARNING: Lossless-Claw plugin install failed — context management unavailable"
+    if su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH $OPENCLAW plugins list 2>/dev/null" | grep -q lossless-claw; then
+        echo "[init] Lossless-Claw plugin present (cached in image)"
     else
-        echo "[init] Lossless-Claw plugin already installed"
+        echo "[init] Lossless-Claw plugin missing — installing..."
+        su -s /bin/bash -c "PATH=/opt/openclaw/bin:\$PATH $OPENCLAW plugins install @martian-engineering/lossless-claw" openclaw || \
+            echo "[init] WARNING: Lossless-Claw plugin install failed"
     fi
 fi
 

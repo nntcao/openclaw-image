@@ -9,7 +9,7 @@
           "incrementalMaxDepth": -1,
           "contextThreshold": 0.75,
           "dbPath": "/data/sqlite/lcm.db",
-          "summaryModel": "${ROUTE_LIGHTWEIGHT_MODEL}"
+          "summaryModel": "claude-haiku-4-5-20251001"
         },
         "description": "Lossless context management - preserves full conversation history via DAG summarization"
       },
